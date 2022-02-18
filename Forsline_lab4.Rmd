@@ -1,0 +1,60 @@
+---
+title: "Lab 4: Deep Learning"
+author: "Mia Forsline"
+date: "2021-02-23"
+output: 
+  html_document:
+    theme: flatly
+    code_folding: hide
+    toc: true
+    toc_float: true
+    number_sections: false 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      message = FALSE, 
+                      warning = FALSE, 
+                      include = TRUE)
+```
+
+```{r}
+librarian::shelf(
+  digest, dplyr)
+
+dir_train_mini <- "/courses/EDS232/inaturalist-2021/train_mini"
+dirs_spp <- list.dirs(dir_train_mini, recursive = F)
+n_spp <- length(dirs_spp) # 10,000 species directories
+n_spp
+```
+
+```{r}
+# set seed (for reproducible results) 
+# just before sampling (otherwise get different results)
+# based on your username (unique amongst class)
+Sys.info()[["user"]] %>% 
+  digest::digest2int() %>% 
+  set.seed()
+i10 <- sample(1:n_spp, 10)
+
+# show the 10 indices sampled of the 10,000 possible 
+i10
+```
+
+
+```{r}
+# show the 10 species directory names
+basename(dirs_spp)[i10]
+```
+
+
+```{r}
+# show the first 2 species directory names
+i2 <- i10[1:2]
+basename(dirs_spp)[i2]
+```
+
+```{r}
+
+```
+
