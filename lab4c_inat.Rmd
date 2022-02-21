@@ -128,13 +128,29 @@ dir.create(test_chinensis_dir)
 ```
 
 ```{r}
-list.files(path = ~/courses/EDS232/inaturalist-2021/train_)
+ch_dir <- paste0("/courses/EDS232/inaturalist-2021/train_mini/", ch)
+files = list.files(ch_dir, full.names = TRUE)
+head(basename(files))
+
+for(i in 1:length(files)){
+  print(basename(files[i]))
+}
+
+file.copy(file.path(ch_dir, basename(files)[1:10]), train_chinensis_dir, overwrite = TRUE)
+
 ```
 
 
 ```{r}
-fnames <- paste0(1:15, ".jpg")
-file.copy(file.path(original_dataset_dir, fnames), 
+file.copy(file.path(ch_dir), 
+          file.path(train_cats_dir)) 
+
+```
+
+
+```{r}
+fnames <- 
+file.copy(file.path(ch_dir, fnames), 
           file.path(train_obtusa_dir)) 
 ```
 
