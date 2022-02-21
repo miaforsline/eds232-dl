@@ -88,6 +88,10 @@ basename(dirs_spp)[i10]
 # show the first 2 species directory names
 i2 <- i10[1:2]
 basename(dirs_spp)[i2]
+
+ob <- "09101_Plantae_Tracheophyta_Magnoliopsida_Oxalidales_Oxalidaceae_Oxalis_obtusa"
+ch <- "02915_Animalia_Chordata_Actinopterygii_Syngnathiformes_Aulostomidae_Aulostomus_chinensis"
+
 ```
 
 Your task is to apply your deep learning skills to build the following models:
@@ -124,7 +128,12 @@ dir.create(test_chinensis_dir)
 ```
 
 ```{r}
-fnames <- paste0("obtusa", 1:50, ".jpg")
+list.files(path = ~/courses/EDS232/inaturalist-2021/train_)
+```
+
+
+```{r}
+fnames <- paste0(1:15, ".jpg")
 file.copy(file.path(original_dataset_dir, fnames), 
           file.path(train_obtusa_dir)) 
 ```
