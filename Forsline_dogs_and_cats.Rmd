@@ -103,8 +103,14 @@ librarian::shelf(
   dplyr,
   keras,
   tensorflow)
+# install_tensorflow()
+# BB: actually needed keras::install_keras() instead of install_tensorflow() 
+#     to install scipy too. ran keras::install_keras() 
+#     and preceeded with conditional check from:
+#     https://bbest.github.io/eds232-ml/lab4a_dl-neural-nets.html#install-python-for-r
+if (!keras::is_keras_available())
+  keras::install_keras()
 
-install_tensorflow()
 tf$constant("Hellow Tensorflow")
 ```
 
@@ -175,7 +181,7 @@ For our compilation step, we'll go with the `RMSprop` optimizer as usual. Since 
 ```{r}
 model %>% compile(
   loss = "binary_crossentropy",
-  optimizer = optimizer_rmsprop(lr = 1e-4),
+  optimizer = optimizer_rmsprop(learning_rate = 1e-4),
   metrics = c("acc"))
 ```
 
@@ -215,6 +221,11 @@ validation_generator <- flow_images_from_directory(
 ```
 
 Let's look at the output of one of these generators: it yields batches of 150 × 150 RGB images (shape `(20, 150, 150, 3)`) and binary labels (shape `(20)`). There are 20 samples in each batch (the batch size). Note that the generator yields these batches indefinitely: it loops endlessly over the images in the target folder.
+
+
+```
+Error in py_iter_next(it, completed) : ImportError: Image transformations require SciPy. Install SciPy.
+```
 
 ```{r}
 batch <- generator_next(train_generator)
