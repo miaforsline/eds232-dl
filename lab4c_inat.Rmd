@@ -137,13 +137,11 @@ for(i in 1:length(files)){
 }
 
 file.copy(file.path(ch_dir, basename(files)[1:10]), train_chinensis_dir, overwrite = TRUE)
-
 ```
 
 
 ```{r}
-file.copy(file.path(ch_dir), 
-          file.path(train_cats_dir)) 
+ 
 
 ```
 
