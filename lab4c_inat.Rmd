@@ -3,58 +3,12 @@ title: "Lab 4c. Deep Learning - iNaturalist"
 editor_options: 
   chunk_output_type: inline
 ---
-
+# Set Up 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = T)
 ```
 
-## Deep Learning with R / Python Exercises
-
-You'll first learn about Computer Vision techniques by going through the Chapter 5 lab exercises:
-
-- 5.1 Introduction to convnets
-  R: [html](./lab4c_5.1.intro-convnets.html), [Rmd](https://raw.githubusercontent.com/bbest/eds232-ml/main/lab4c_5.1.intro-convnets.Rmd) ; Python: [html](https://github.com/fchollet/deep-learning-with-python-notebooks/blob/8a30b90fed187aaddaaf1fc868ec8e0ac92bca40/5.2-using-convnets-with-small-datasets.ipynb), [ipynb](https://raw.githubusercontent.com/fchollet/deep-learning-with-python-notebooks/8a30b90fed187aaddaaf1fc868ec8e0ac92bca40/5.2-using-convnets-with-small-datasets.ipynb)
-
-- 5.2 Training a convnet from scratch on a small dataset
-  R: [html](./lab4c_5.2.small-convnets.html), [Rmd](https://raw.githubusercontent.com/bbest/eds232-ml/main/lab4c_5.2.small-convnets.Rmd) ; Python: [html](https://github.com/fchollet/deep-learning-with-python-notebooks/blob/8a30b90fed187aaddaaf1fc868ec8e0ac92bca40/5.1-introduction-to-convnets.ipynb), [ipynb](https://raw.githubusercontent.com/fchollet/deep-learning-with-python-notebooks/8a30b90fed187aaddaaf1fc868ec8e0ac92bca40/5.1-introduction-to-convnets.ipynb)
-
-The subsequent lab exercises meet the limits of using a CPU over a GPU, which is not available on `taylor.bren.ucsb.edu`. Here's as far as I was able to get for demonstration sake, but you're not expected to run this. You might want to try if you have personal computer with a GPU setup.
-
-- 5.3 Using a pretrained convnet
-  R: [html](./lab4c_5.3-using-a-pretrained-convnet.html), [Rmd](https://raw.githubusercontent.com/bbest/eds232-ml/main/lab4c_5.3-using-a-pretrained-convnet.Rmd) ; Python: [html](https://github.com/fchollet/deep-learning-with-python-notebooks/blob/8a30b90fed187aaddaaf1fc868ec8e0ac92bca40/5.3-using-a-pretrained-convnet.ipynb), [ipynb](https://raw.githubusercontent.com/fchollet/deep-learning-with-python-notebooks/8a30b90fed187aaddaaf1fc868ec8e0ac92bca40/5.3-using-a-pretrained-convnet.ipynb)
-
-## iNaturalist
-
-The main lab that you'll turn in is to apply these techniques to a small subset of the iNaturalist species imagery. These data were downloaded from the links provided at [github.com/visipedia/inat_comp:2021/](https://github.com/visipedia/inat_comp/tree/master/2021). Of all the 10,000 species and many images for each from training (Train), training mini (Train Mini), validation (Val) and test images, you'll draw only from the Train Mini set of images:
-
-![](https://github.com/visipedia/inat_comp/raw/master/2021/assets/train_val_distribution.png)
-
-
-```{r, echo=F, eval=F}
-# # in Terminal:
-# #   cd /courses/EDS232; mkdir 'inaturalist-2021'
-# #   curl -o train_mini.tar.gz https://ml-inat-competition-datasets.s3.amazonaws.com/2021/train_mini.tar.gz
-# #   tar -xzf train_mini.tar.gz 
-# 
-# librarian::shelf(
-#   dplyr, glue, jsonlite, listviewer, purrr, readr, tidyjson, tidyr)
-# 
-# train_mini <- jsonlite::read_json("~/Desktop/iNat/train_mini.json")
-# 
-# write_meta <- function(m){
-#   train_mini[[m]]  %>% 
-#     tidyjson::spread_all() %>% 
-#     tibble() %>% 
-#     select(-document.id, -`..JSON`) %>% 
-#     write_csv(
-#       glue("~/Desktop/iNat/train_mini_{m}.csv"))
-# }
-# write_meta("images")
-# write_meta("annotations")
-# write_meta("categories")
-```
-
-The images are available under
+# Data Pre-Processing 
 
 ```{r}
 librarian::shelf(
@@ -70,7 +24,10 @@ inat_spp_dirs_csv <- "~/inat_species_dirs.csv"
 dirs_spp <- list.dirs(dir_train_mini, recursive = F)
 n_spp <- length(dirs_spp)
 n_spp
+```
 
+
+```{r}
 # set seed (for reproducible results) 
 # just before sampling (otherwise get different results)
 # based on your username (unique amongst class)
@@ -81,17 +38,63 @@ i10 <- sample(1:n_spp, 10)
 
 # show the 10 indices sampled of the 10,000 possible 
 i10
+```
 
-# show the 10 species directory names
+
+```{r}
+# show the 10 species directory names 
 basename(dirs_spp)[i10]
+```
 
+
+```{r}
 # show the first 2 species directory names
 i2 <- i10[1:2]
 basename(dirs_spp)[i2]
 
-ob <- "09101_Plantae_Tracheophyta_Magnoliopsida_Oxalidales_Oxalidaceae_Oxalis_obtusa"
-ch <- "02915_Animalia_Chordata_Actinopterygii_Syngnathiformes_Aulostomidae_Aulostomus_chinensis"
+obtusa <- basename(dirs_spp)[i2][1]
+chinensis <- basename(dirs_spp)[i2][2]
 
+```
+
+```{r}
+# path to output table of paths, which could be read by R, eg readr::read_csv(), or Python, eg pandas.read_csv()
+inat_spp_images_csv <- "~/inat_spp_images.csv"
+
+d <- tibble(
+  # get 10 species names
+  species = basename(dirs_spp)[i10],
+  # assign TRUE/FALSE for: 10 species (multi-class) and 2 species (binary)
+  spp10 = TRUE,
+  spp2  = c(T,T,rep(F,8)))
+DT::datatable(d)
+```
+
+```{r}
+d <- d %>% 
+  mutate(
+    # construct full path to species directory
+    dir_species = file.path(dir_train_mini, species),
+    tbl_images  = purrr::map(dir_species, function(dir){
+      # create a tibble per species
+      tibble(
+        # list files in the species directory (n=50)
+        image = list.files(dir),
+        # assign subset per species
+        subset = c(rep("train", 30), rep("validation", 10), rep("test", 10))) })) %>% 
+  # go from a tibble with 10 species rows containing a nested tbl_images to unnested, ie 10 species * 50 images = 500 rows
+  tidyr::unnest(tbl_images)
+
+# write tibble to CSV file for subsequent reading
+readr::write_csv(d, inat_spp_images_csv)
+
+# show counts of image files per species and subset
+d %>% 
+  mutate(
+    # truncate species to show one line per species
+    species_trunc = stringr::str_trunc(species, 40)) %>% 
+  select(species_trunc, subset) %>% 
+  table()
 ```
 
 Your task is to apply your deep learning skills to build the following models:
