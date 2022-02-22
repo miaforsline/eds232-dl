@@ -99,7 +99,38 @@ d %>%
 
 Your task is to apply your deep learning skills to build the following models:
 
-# **2 Species (binary classification) - neural net**. Draw from [3.4 🍿 Movies (binary classification)](./lab4b_examples.html). You'll need to pre-process the images to be a consistent shape first though -- see 5.2.4 Data preprocessing.
+# 1. **2 Species (binary classification) - neural net**. 
+
+Draw from [3.4 🍿 Movies (binary classification)](./lab4b_examples.html). You'll need to pre-process the images to be a consistent shape first though -- see 5.2.4 Data preprocessing.
+
+```{r}
+library(keras)
+```
+
+## Subset the data 
+- train: n = 30 
+- validate: n = 10 
+- test: n = 10 
+```{r}
+train_sub <- subset(d, d$subset == "train")
+train_data <- train_sub[sample(nrow(train_sub), size = 30, replace = FALSE), ]
+
+validate_sub <- subset(d, d$subset == "validation")
+validate_data <- validate_sub[sample(nrow(validate_sub), size = 10, replace = FALSE), ]
+
+test_sub <- subset(d, d$subset == "test")
+test_data <- test_sub[sample(nrow(test_sub), size = 10, replace = FALSE), ]
+```
+
+
+
+
+
+
+
+
+
+
 
 # Create training, validation, and test datasets 
 ```{r}
