@@ -12,13 +12,10 @@ knitr::opts_chunk$set(echo = T)
 
 ```{r}
 librarian::shelf(
-  digest, dplyr)
+  digest, dplyr, DT, glue, purrr, readr, stringr, tidyr)
 
 # path to folder containing species directories of images
 dir_train_mini <- "/courses/EDS232/inaturalist-2021/train_mini"
-
-# path to output table of paths, which could be read by R, eg read_csv(), or Python, eg 
-inat_spp_dirs_csv <- "~/inat_species_dirs.csv"
 
 # get list of directories, one per species (n = 10,000 species)
 dirs_spp <- list.dirs(dir_train_mini, recursive = F)
@@ -50,7 +47,7 @@ basename(dirs_spp)[i10]
 ```{r}
 # show the first 2 species directory names
 i2 <- i10[1:2]
-basename(dirs_spp)[i2]
+sp2 <- basename(dirs_spp)[i2]
 
 obtusa <- basename(dirs_spp)[i2][1]
 chinensis <- basename(dirs_spp)[i2][2]
@@ -86,7 +83,8 @@ d <- d %>%
   tidyr::unnest(tbl_images)
 
 # write tibble to CSV file for subsequent reading
-readr::write_csv(d, inat_spp_images_csv)
+## save CSV in data folder 
+readr::write_csv(d, "data/inat_spp_images.csv", inat_spp_images_csv)
 
 # show counts of image files per species and subset
 d %>% 
@@ -97,56 +95,87 @@ d %>%
   table()
 ```
 
-Your task is to apply your deep learning skills to build the following models:
+# Create training, validation, and test directories 
+```{r}
+original_dataset_dir <- "/courses/EDS232/inaturalist-2021/train_mini"
+base_dir             <- "~/eds232/eds232-dl/data"
+```
+
+## Create general directories for binary classification 
+```{r}
+# base directories 
+train_dir_2 <- file.path(base_dir, "train_2")
+validation_dir_2 <- file.path(base_dir, "validation_2")
+test_dir_2 <- file.path(base_dir, "test_2")
+
+# create base train, validate, test directories 
+dir.create(train_dir_2)
+dir.create(validation_dir_2)
+dir.create(test_dir_2)
+```
+
+## Create directories for binary classification of 2 species 
+```{r}
+# for loop to create species specific train, validate, and test directories
+# named directories using the unique 5 digit characters at the start of the file
+for (i in 1:length(sp2)){
+  dir.create(file.path(train_dir_2, str_sub(sp2[[i]], start = 1, end = 5)))
+  dir.create(file.path(validation_dir_2, str_sub(sp2[[i]], start = 1, end = 5)))
+  dir.create(file.path(test_dir_2, str_sub(sp2[[i]], start = 1, end = 5)))
+}
+```
+
+## Add images into the directories for binary classification of 2 species 
+
+```{r}
+# create test, validation, and training groups of images
+for(i in 1:length(sp2)){
+  # create 5 groups of 10 random samples
+  species_samples_2 <- replicate(5, sample(list.files(paste0(original_dataset_dir, "/", sp2[[i]]), 
+                                                    full.names = TRUE), replace = FALSE, 10))
+  ## train n = 30 ##
+  train <- rbind(species_samples_2[,1], species_samples_2[,2], species_samples_2[,3])
+  file.copy(from = train, 
+            to = paste0(train_dir_2, "/", str_sub(sp2[[i]], start = 1, end = 5)))
+  ## validation n = 10 ##
+  validate <- species_samples_2[,4]
+  file.copy(from = validate,
+            to = paste0(validation_dir_2, "/", str_sub(sp2[[i]], start = 1, end = 5)))
+  ## train n = 10 ##
+  test <- species_samples_2[,5]
+  file.copy(from = test,
+            to = paste0(test_dir_2, "/", str_sub(sp2[[i]], start = 1, end = 5)))
+  }
+```
 
 # 1. **2 Species (binary classification) - neural net**. 
 
-Draw from [3.4 🍿 Movies (binary classification)](./lab4b_examples.html). You'll need to pre-process the images to be a consistent shape first though -- see 5.2.4 Data preprocessing.
+
 
 ```{r}
 library(keras)
 ```
 
 ## Subset the data 
-- train: n = 30 
-- validate: n = 10 
-- test: n = 10 
+- train: n = 30 per species (n = 60 in total for 2 species)
+- validate: n = 10 per species (n = 20 in total for 2 species)
+- test: n = 10 per species (n = 20 in total for 2 species)
 ```{r}
-train_sub <- subset(d, d$subset == "train")
-train_data <- train_sub[sample(nrow(train_sub), size = 30, replace = FALSE), ]
+train_data <- subset(d, d$subset == "train" & d$spp2 == TRUE)
+validate_data <- subset(d, d$subset == "validation" & d$spp2 == TRUE)
+test_data <- subset(d, d$subset == "test" & d$spp2 == TRUE)
+```
 
-validate_sub <- subset(d, d$subset == "validation")
-validate_data <- validate_sub[sample(nrow(validate_sub), size = 10, replace = FALSE), ]
+## Copy images into appropriate directories 
 
-test_sub <- subset(d, d$subset == "test")
-test_data <- test_sub[sample(nrow(test_sub), size = 10, replace = FALSE), ]
+```{r}
+
 ```
 
 
 
 
 
-
-
-
-
-
-
-# Create training, validation, and test datasets 
-```{r}
-original_dataset_dir <- "/courses/EDS232/inaturalist-2021/train_mini"
-base_dir             <- "~/eds232/eds232-dl/data"
-
-train_dir           <- file.path(base_dir, "train")
-train_obtusa_dir      <- file.path(train_dir, "obtusa")
-train_chinensis_dir      <- file.path(train_dir, "chinensis")
-validation_dir      <- file.path(base_dir, "validation")
-validation_obtusa_dir <- file.path(validation_dir, "obtusa")
-validation_chinensis_dir <- file.path(validation_dir, "chinensis")
-test_dir            <- file.path(base_dir, "test")
-test_obtusa_dir       <- file.path(test_dir, "obtusa")
-test_chinensis_dir       <- file.path(test_dir, "chinensis")
-```
 
 ```{r}
 dir.create(base_dir)
