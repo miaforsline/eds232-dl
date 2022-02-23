@@ -11,8 +11,14 @@ knitr::opts_chunk$set(echo = T)
 # Data Pre-Processing 
 
 ```{r}
+# install keras with tensorflow
+if (!keras::is_keras_available())
+  keras::install_keras()
+
 librarian::shelf(
   digest, dplyr, DT, glue, keras, purrr, readr, stringr, tidyr)
+
+
 
 # path to folder containing species directories of images
 dir_train_mini <- "/courses/EDS232/inaturalist-2021/train_mini"
@@ -210,7 +216,7 @@ validation_datagen <- image_data_generator(rescale = 1/255)
 
 train_generator <- flow_images_from_directory(
   # This is the target directory
-  train_dir,
+  train_dir_2,
   # This is the data generator
   train_datagen,
   # All images will be resized to 150x150
@@ -220,7 +226,7 @@ train_generator <- flow_images_from_directory(
   class_mode = "binary")
 
 validation_generator <- flow_images_from_directory(
-  validation_dir,
+  validation_dir_2,
   validation_datagen,
   target_size = c(150, 150),
   batch_size = 20,
@@ -233,6 +239,41 @@ validation_generator <- flow_images_from_directory(
 batch <- generator_next(train_generator)
 str(batch)
 ```
+
+
+```{r}
+dir_models_2 <- file.path(base_dir, "dir_models_2")
+dir.create(dir_models_2, recursive=T, showWarnings = F)
+mdl1_h5 <- file.path(dir_models_2, "sp2.h5")
+mdl1_history_rds <- file.path(dir_models_2, "sp2_history.rds")
+```
+
+```{r}
+# check if already fitted and saved model
+if (!file.exists(mdl1_history_rds) | !file.exists(mdl1_h5)){
+  # fit model
+  history <- model %>% fit_generator(
+    train_generator,
+    steps_per_epoch = 100,
+    epochs = 30,
+    validation_data = validation_generator,
+    validation_steps = 50)
+  
+  # save fitted model and fitting history
+  history %>% saveRDS(mdl1_history_rds)
+  model %>% save_model_hdf5(mdl1_h5)
+} else{
+  # load previously fitted model
+  history <- readRDS(mdl1_history_rds)
+  model   <- load_model_hdf5(mdl1_h5)
+}
+```
+
+```{r}
+plot(history)
+```
+
+
 
 
 
