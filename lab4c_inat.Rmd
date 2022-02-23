@@ -5,21 +5,36 @@ editor_options:
 ---
 # Set Up 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = T)
+knitr::opts_chunk$set(echo = TRUE)
+librarian::shelf(
+  tidyverse,
+  tensorflow, 
+  digest,
+  keras,
+  digest, 
+  dplyr, 
+  DT, 
+  glue, 
+  keras, 
+  purrr, 
+  readr, 
+  stringr, 
+  tidyr
+)
+# install Python into user space
+(reticulate::miniconda_path()) # show the Python path
+if (!file.exists(reticulate::miniconda_path()))
+  reticulate::install_miniconda()
+# install keras with tensorflow
+if (!keras::is_keras_available())
+  keras::install_keras()
+
+
 ```
 
 # Data Pre-Processing 
 
 ```{r}
-# install keras with tensorflow
-if (!keras::is_keras_available())
-  keras::install_keras()
-
-librarian::shelf(
-  digest, dplyr, DT, glue, keras, purrr, readr, stringr, tidyr)
-
-
-
 # path to folder containing species directories of images
 dir_train_mini <- "/courses/EDS232/inaturalist-2021/train_mini"
 
@@ -177,42 +192,12 @@ for (i in 1:length(sp2)){
 }
 ```
 
-```{r}
-library(keras)
-library(dplyr)
-
-model <- keras_model_sequential() %>% 
-  layer_conv_2d(filters = 32, kernel_size = c(3, 3), activation = "relu",
-                input_shape = c(150, 150, 3)) %>% 
-  layer_max_pooling_2d(pool_size = c(2, 2)) %>% 
-  layer_conv_2d(filters = 64, kernel_size = c(3, 3), activation = "relu") %>% 
-  layer_max_pooling_2d(pool_size = c(2, 2)) %>% 
-  layer_conv_2d(filters = 128, kernel_size = c(3, 3), activation = "relu") %>% 
-  layer_max_pooling_2d(pool_size = c(2, 2)) %>% 
-  layer_conv_2d(filters = 128, kernel_size = c(3, 3), activation = "relu") %>% 
-  layer_max_pooling_2d(pool_size = c(2, 2)) %>% 
-  layer_flatten() %>% 
-  layer_dense(units = 512, activation = "relu") %>% 
-  layer_dense(units = 1, activation = "sigmoid")
-```
-
-```{r}
-summary(model)
-```
-
-
-```{r}
-model %>% compile(
-  loss = "binary_crossentropy",
-  optimizer = optimizer_rmsprop(learning_rate = 1e-4),
-  metrics = c("acc"))
-```
-
-## More data pre-processing 
+## Rescale images 
 ```{r}
 # All images will be rescaled by 1/255
 train_datagen <- image_data_generator(rescale = 1/255)
 validation_datagen <- image_data_generator(rescale = 1/255)
+test_datagen <- image_data_generator(rescale = 1/255)
 
 train_generator <- flow_images_from_directory(
   # This is the target directory
@@ -221,7 +206,7 @@ train_generator <- flow_images_from_directory(
   train_datagen,
   # All images will be resized to 150x150
   target_size = c(150, 150),
-  batch_size = 20,
+  batch_size = 5,
   # Since we use binary_crossentropy loss, we need binary labels
   class_mode = "binary")
 
@@ -229,7 +214,14 @@ validation_generator <- flow_images_from_directory(
   validation_dir_2,
   validation_datagen,
   target_size = c(150, 150),
-  batch_size = 20,
+  batch_size = 5,
+  class_mode = "binary")
+
+test_generator <- flow_images_from_directory(
+  test_dir_2,
+  test_datagen,
+  target_size = c(150, 150),
+  batch_size = 5,
   class_mode = "binary")
 ```
 
@@ -240,128 +232,48 @@ batch <- generator_next(train_generator)
 str(batch)
 ```
 
-
+## Build the network 
 ```{r}
-dir_models_2 <- file.path(base_dir, "dir_models_2")
-dir.create(dir_models_2, recursive=T, showWarnings = F)
-mdl1_h5 <- file.path(dir_models_2, "sp2.h5")
-mdl1_history_rds <- file.path(dir_models_2, "sp2_history.rds")
+model <- keras_model_sequential() %>% 
+  layer_dense(units = 16, activation = "relu", input_shape = c(150, 150, 3)) %>%
+  layer_flatten() %>% 
+  layer_dense(units = 16, activation = "relu") %>% 
+  layer_dense(units =  1, activation = "sigmoid")
 ```
 
 ```{r}
-# check if already fitted and saved model
-if (!file.exists(mdl1_history_rds) | !file.exists(mdl1_h5)){
-  # fit model
-  history <- model %>% fit_generator(
+model %>% compile(
+  optimizer = "rmsprop",
+  loss      = "binary_crossentropy",
+  metrics   = c("accuracy"))
+```
+
+
+```{r}
+history <- model %>% fit(
     train_generator,
-    steps_per_epoch = 100,
+    steps_per_epoch = 5,
     epochs = 30,
     validation_data = validation_generator,
-    validation_steps = 50)
-  
-  # save fitted model and fitting history
-  history %>% saveRDS(mdl1_history_rds)
-  model %>% save_model_hdf5(mdl1_h5)
-} else{
-  # load previously fitted model
-  history <- readRDS(mdl1_history_rds)
-  model   <- load_model_hdf5(mdl1_h5)
-}
+    validation_steps = 5)
 ```
 
 ```{r}
 plot(history)
 ```
-
-
-
-
-
-
-
-
-
-## Subset the data 
+## Evaluate 
 
 ```{r}
-train_data <- subset(d, d$subset == "train" & d$spp2 == TRUE)
-validate_data <- subset(d, d$subset == "validation" & d$spp2 == TRUE)
-test_data <- subset(d, d$subset == "test" & d$spp2 == TRUE)
-```
-
-## Copy images into appropriate directories 
-
-```{r}
-
-```
-
-
-
-
-
-
-```{r}
-dir.create(base_dir)
-dir.create(train_dir)
-dir.create(validation_dir)
-dir.create(test_dir)
-dir.create(train_obtusa_dir)
-dir.create(train_chinensis_dir)
-dir.create(validation_obtusa_dir)
-dir.create(validation_chinensis_dir)
-dir.create(test_obtusa_dir)
-dir.create(test_chinensis_dir)
-```
-
-```{r}
-ch_dir <- paste0("/courses/EDS232/inaturalist-2021/train_mini/", ch)
-files = list.files(ch_dir, full.names = TRUE)
-head(basename(files))
-
-for(i in 1:length(files)){
-  print(basename(files[i]))
-}
-
-file.copy(file.path(ch_dir, basename(files)[1:10]), train_chinensis_dir, overwrite = TRUE)
-```
-
-
-```{r}
- 
-
-```
-
-
-```{r}
-fnames <- 
-file.copy(file.path(ch_dir, fnames), 
-          file.path(train_obtusa_dir)) 
-```
-
-
-```{r}
-# All images will be rescaled by 1/255
-train_datagen <- image_data_generator(rescale = 1/255)
-validation_datagen <- image_data_generator(rescale = 1/255)
-
-train_generator <- flow_images_from_directory(
-  # This is the target directory
-  train_dir,
-  # This is the data generator
-  train_datagen,
-  # All images will be resized to 150x150
+test_generator <- flow_images_from_directory(
+  test_dir_2,
+  test_datagen,
   target_size = c(150, 150),
   batch_size = 20,
-  # Since we use binary_crossentropy loss, we need binary labels
-  class_mode = "binary")
-
-validation_generator <- flow_images_from_directory(
-  validation_dir,
-  validation_datagen,
-  target_size = c(150, 150),
-  batch_size = 20,
-  class_mode = "binary")
+  class_mode = "binary"
+)
+model %>% evaluate_generator(test_generator, steps = 50)
 ```
+
 
 
 # **2 Species (binary classification) - convolutional neural net**. Draw from the [dogs vs cats example](https://bbest.github.io/eds232-ml/lab4c_5.2.small-convnets.html).
