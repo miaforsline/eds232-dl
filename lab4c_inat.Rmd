@@ -72,6 +72,9 @@ basename(dirs_spp)[i10]
 i2 <- i10[1:2]
 sp2 <- basename(dirs_spp)[i2]
 
+obtusa <- basename(dirs_spp)[i2][1]
+chinensis <- basename(dirs_spp)[i2][2]
+
 ```
 
 ```{r}
