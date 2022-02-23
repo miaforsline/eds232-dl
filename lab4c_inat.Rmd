@@ -478,9 +478,59 @@ model %>% evaluate(test_generator_3, steps = 50)
 
 # **10 Species (multi-class classification) - convolutional neural net**. 
 
+## Build the network 
+```{r}
+# make the new model  
+model <- keras_model_sequential() %>% 
+  layer_conv_2d(
+    filters = 32, kernel_size = c(3, 3), activation = "relu",
+    input_shape = c(150, 150, 3)) %>% 
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>% 
+  layer_conv_2d(filters = 64, kernel_size = c(3, 3), activation = "relu") %>% 
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>% 
+  layer_conv_2d(filters = 128, kernel_size = c(3, 3), activation = "relu") %>% 
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>% 
+  layer_conv_2d(filters = 128, kernel_size = c(3, 3), activation = "relu") %>% 
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>% 
+  layer_flatten() %>% 
+  layer_dropout(rate = 0.5) %>% 
+  layer_dense(units = 512, activation = "relu") %>% 
+  layer_dense(units = 1, activation = "sigmoid")  
+  
+model %>% compile(
+  loss = "categorical_crossentropy",
+  optimizer = optimizer_rmsprop(learning_rate = 1e-4),
+  metrics = c("acc"))
+```
+
+## Fit the model 
+
+```{r}
+history_3 <- model %>% fit(
+    train_generator_10,
+    steps_per_epoch = 5,
+    epochs = 30,
+    validation_data = validation_generator_10,
+    validation_steps = 5)
+```
+
+## Evaluate the model 
+
+```{r}
+history_3
+```
 
 
-
+```{r}
+test_generator_4 <- flow_images_from_directory(
+  test_dir_10,
+  test_datagen_10,
+  target_size = c(150, 150),
+  batch_size = 20,
+  class_mode = "categorical"
+)
+model %>% evaluate(test_generator_4, steps = 50)
+```
 
 
 
