@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = T)
 
 ```{r}
 librarian::shelf(
-  digest, dplyr, DT, glue, purrr, readr, stringr, tidyr)
+  digest, dplyr, DT, glue, keras, purrr, readr, stringr, tidyr)
 
 # path to folder containing species directories of images
 dir_train_mini <- "/courses/EDS232/inaturalist-2021/train_mini"
@@ -101,7 +101,15 @@ original_dataset_dir <- "/courses/EDS232/inaturalist-2021/train_mini"
 base_dir             <- "~/eds232/eds232-dl/data"
 ```
 
-## Create general directories for binary classification 
+
+# 1. **2 Species (binary classification) - neural net**. 
+
+- Based on the 3.4 Movies example (binary classification)
+- I will be using 2 randomly assigned species: 
+  - `r obtusa`
+  - `r chinensis`
+  
+  ## Create general directories for binary classification 
 ```{r}
 # base directories 
 train_dir_2 <- file.path(base_dir, "train_2")
@@ -113,6 +121,11 @@ dir.create(train_dir_2)
 dir.create(validation_dir_2)
 dir.create(test_dir_2)
 ```
+  
+- I will subset the iNaturalist data into 3 groups: 
+  1. train: n = 30 per species (n = 60 in total for 2 species)
+  2. validate: n = 10 per species (n = 20 in total for 2 species)
+  3. test: n = 10 per species (n = 20 in total for 2 species)
 
 ## Create directories for binary classification of 2 species 
 ```{r}
@@ -136,30 +149,99 @@ for(i in 1:length(sp2)){
   ## train n = 30 ##
   train <- rbind(species_samples_2[,1], species_samples_2[,2], species_samples_2[,3])
   file.copy(from = train, 
-            to = paste0(train_dir_2, "/", str_sub(sp2[[i]], start = 1, end = 5)))
+            to = paste0(train_dir_2, "/", str_sub(sp2[[i]], start = 1, end = 5)), overwrite = TRUE)
   ## validation n = 10 ##
   validate <- species_samples_2[,4]
   file.copy(from = validate,
-            to = paste0(validation_dir_2, "/", str_sub(sp2[[i]], start = 1, end = 5)))
+            to = paste0(validation_dir_2, "/", str_sub(sp2[[i]], start = 1, end = 5)), overwrite = TRUE)
   ## train n = 10 ##
   test <- species_samples_2[,5]
   file.copy(from = test,
-            to = paste0(test_dir_2, "/", str_sub(sp2[[i]], start = 1, end = 5)))
-  }
+            to = paste0(test_dir_2, "/", str_sub(sp2[[i]], start = 1, end = 5)), overwrite = TRUE)
+}
 ```
 
-# 1. **2 Species (binary classification) - neural net**. 
+
+```{r}
+# sanity check that the training dataset has 30, the validation set has 10, and the test dataset has 10 images per species 
+for (i in 1:length(sp2)){
+  cat("total training images", length(list.files(file.path(train_dir_2, str_sub(sp2[[i]], start = 1, end = 5)))), "\n")
+  cat("total validation images", length(list.files(file.path(validation_dir_2, str_sub(sp2[[i]], start = 1, end = 5)))), "\n")
+  cat("total test images", length(list.files(file.path(test_dir_2, str_sub(sp2[[i]], start = 1, end = 5)))), "\n")
+}
+```
+
+```{r}
+library(keras)
+library(dplyr)
+
+model <- keras_model_sequential() %>% 
+  layer_conv_2d(filters = 32, kernel_size = c(3, 3), activation = "relu",
+                input_shape = c(150, 150, 3)) %>% 
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>% 
+  layer_conv_2d(filters = 64, kernel_size = c(3, 3), activation = "relu") %>% 
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>% 
+  layer_conv_2d(filters = 128, kernel_size = c(3, 3), activation = "relu") %>% 
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>% 
+  layer_conv_2d(filters = 128, kernel_size = c(3, 3), activation = "relu") %>% 
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>% 
+  layer_flatten() %>% 
+  layer_dense(units = 512, activation = "relu") %>% 
+  layer_dense(units = 1, activation = "sigmoid")
+```
+
+```{r}
+summary(model)
+```
+
+
+```{r}
+model %>% compile(
+  loss = "binary_crossentropy",
+  optimizer = optimizer_rmsprop(learning_rate = 1e-4),
+  metrics = c("acc"))
+```
+
+## More data pre-processing 
+```{r}
+# All images will be rescaled by 1/255
+train_datagen <- image_data_generator(rescale = 1/255)
+validation_datagen <- image_data_generator(rescale = 1/255)
+
+train_generator <- flow_images_from_directory(
+  # This is the target directory
+  train_dir,
+  # This is the data generator
+  train_datagen,
+  # All images will be resized to 150x150
+  target_size = c(150, 150),
+  batch_size = 20,
+  # Since we use binary_crossentropy loss, we need binary labels
+  class_mode = "binary")
+
+validation_generator <- flow_images_from_directory(
+  validation_dir,
+  validation_datagen,
+  target_size = c(150, 150),
+  batch_size = 20,
+  class_mode = "binary")
+```
 
 
 
 ```{r}
-library(keras)
+batch <- generator_next(train_generator)
+str(batch)
 ```
 
+
+
+
+
+
+
 ## Subset the data 
-- train: n = 30 per species (n = 60 in total for 2 species)
-- validate: n = 10 per species (n = 20 in total for 2 species)
-- test: n = 10 per species (n = 20 in total for 2 species)
+
 ```{r}
 train_data <- subset(d, d$subset == "train" & d$spp2 == TRUE)
 validate_data <- subset(d, d$subset == "validation" & d$spp2 == TRUE)
