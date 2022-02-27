@@ -388,8 +388,8 @@ test_generator_2 <- flow_images_from_directory(
   class_mode = "binary"
 )
 results <- model %>% evaluate(test_generator_2, steps = 50)
-loss2 <- results [[1]]
-accuracy2 <- results[[2]]
+loss2 <- round(results [[1]], digits = 2)
+accuracy2 <- round(results[[2]], digits = 2) 
 ```
 
 The convolutional neural network for binary classification demonstrated a loss of approximately `r loss2` and accuracy of approximately `r accuracy2`. 
@@ -450,6 +450,7 @@ for(i in 1:length(sp10)){
 ```
 
 ## Check number of images per folder 
+
 ```{r}
 # sanity check that the training dataset has 30, the validation set has 10, and the test dataset has 10 images per species 
 for (i in 1:length(sp10)){
