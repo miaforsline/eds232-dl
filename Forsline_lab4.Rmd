@@ -328,7 +328,7 @@ accuracy <- round(results [[2]], digits = 2)
 
 The standard neural network for binary classification demonstrated a loss of approximately `r loss` and accuracy of approximately `r accuracy`. 
 
-# **2 Species (binary classification) - convolutional neural net**. 
+# 2. **Species (binary classification) - convolutional neural net**. 
 
 ## Make the new model 
 - the covnet is a stack of alternated `layer_conv_2d()` with `relu` activation and `layer_max_pooling_2d()` stages 
@@ -562,10 +562,10 @@ accuracy3 <- round(results3[[2]], digits = 2)
 ```
 The multi-class classification standard neural net demonstrated a loss of approximately `r loss3` and an accuracy rate of approximately `r accuracy3`. 
 
-# **10 Species (multi-class classification) - convolutional neural net**. 
+# 4. **10 Species (multi-class classification) - convolutional neural net**. 
 
 ## Build the network 
-
+- end the network with a single `sigmoid` unit 
 ```{r}
 # make the new model  
 model <- keras_model_sequential() %>% 
@@ -582,18 +582,22 @@ model <- keras_model_sequential() %>%
   layer_flatten() %>% 
   layer_dropout(rate = 0.5) %>% 
   layer_dense(units = 512, activation = "relu") %>% 
-  layer_dense(units = 1, activation = "sigmoid")  
-  
+  layer_dense(units = 10, activation = "softmax")
+```
+
+## Choose loss function and optimizer 
+- continue using `rmsprop` optimizer 
+```{r}
 model %>% compile(
   loss = "categorical_crossentropy",
   optimizer = optimizer_rmsprop(learning_rate = 1e-4),
-  metrics = c("acc"))
+  metrics = c("accuracy"))
 ```
 
 ## Fit the model 
 
 ```{r}
-history_3 <- model %>% fit(
+history_4 <- model %>% fit(
     train_generator_10,
     steps_per_epoch = 5,
     epochs = 30,
@@ -601,12 +605,13 @@ history_3 <- model %>% fit(
     validation_steps = 5)
 ```
 
-## Evaluate the model 
+## History plot 
 
 ```{r}
-history_3
+plot(history_4)
 ```
 
+## Evaluation the model 
 
 ```{r}
 test_generator_4 <- flow_images_from_directory(
@@ -616,22 +621,13 @@ test_generator_4 <- flow_images_from_directory(
   batch_size = 20,
   class_mode = "categorical"
 )
-model %>% evaluate(test_generator_4, steps = 50)
+results4 <- model %>% evaluate(test_generator_4, steps = 50)
+loss4 <- round(results4[[1]], digits = 2)
+accuracy4 <- round(results4[[2]], digits = 2)
 ```
 
+The multi-class classification convolutional neural net demonstrated a loss of approximately `r loss4` and an accuracy rate of approximately `r accuracy4`. 
 
+# Compare multi-class classification standard neural net vs convolutional neural net 
 
-
-
-
-
-
-
-
-In your models, be sure to include the following:
-
-- Split the original images per species (n=50) into train (n=30), validate (n=10) and test (n=10). These are almost absurdly few files to feed into these complex deep learning models but will serve as a good learning example.
-
-- Include accuracy metric and validation in the fitting process and history plot.
-
-- Evaluate loss and accuracy on your test model results. Compare standard neural network and convolutional neural network results.
+Similar to the binary classification exercises, the multi-class classification convolutional neural net outperformed the standard neural net with a slightly higher accuracy and slightly lower loss function. 
