@@ -500,16 +500,26 @@ str(batch)
 ```
 
 ## Build the network 
-
+- compared to binary classification, the dimensionality of multi-class classification output is much larger 
+- for binary classification, we used 16-dimensional space in our stack of dense layers
+  - however, if one layer drops information, that lost information cannot be recovered by later layers
+  - each layer can become an *information bottleneck*
+- to overcome this problem, we will use 64 units instead of 16 
+- also note that we end the network with a dense layer of size 10 (not 64) in order to output a 10-dimensional vector to encode a different output class (remember, we have 10 different species)
+- the last layer uses `softmax` activation so the network will output a probability distribution over 10 different output classes 
 ```{r}
 model <- keras_model_sequential() %>% 
-  layer_dense(units = 16, activation = "relu", input_shape = c(150, 150, 3)) %>%
+  layer_dense(units = 64, activation = "relu", input_shape = c(150, 150, 3)) %>%
   layer_flatten() %>% 
-  layer_dense(units = 16, activation = "relu") %>% 
-  layer_dense(units =  1, activation = "softmax")
+  layer_dense(units = 64, activation = "relu") %>% 
+  layer_dense(units =  10, activation = "softmax")
 ```
 
-## Compile 
+## Select a loss function
+- we will continue to use the `rmsprop` optimizer
+- but now we will use the `categorical_crossentropy` loss function to measure the distance between 2 probability distributions
+  - between the probability distribution output by our network and the true distribution of the labels 
+  - we want to minimize this distance to train our network to output something as close as possible to the true labels 
 
 ```{r}
 model %>% compile(
@@ -519,9 +529,10 @@ model %>% compile(
 )
 ```
 
-## Fit the model 
+## Fit the model
 
 ```{r}
+#sometimes this line runs into an error - but restarting the R session + clearing the global environment usually clears up the error 
 history_3 <- model %>% fit(
   train_generator_10,
   steps_per_epoch = 5,
@@ -530,10 +541,12 @@ history_3 <- model %>% fit(
   validation_steps = 5)
 ```
 
-## Evaluate the model 
+## History plot 
 ```{r}
-history_3
+plot(history_3)
 ```
+
+## Evaluate the model 
 
 ```{r}
 test_generator_3 <- flow_images_from_directory(
@@ -543,13 +556,16 @@ test_generator_3 <- flow_images_from_directory(
   batch_size = 20,
   class_mode = "categorical"
 )
-model %>% evaluate(test_generator_3, steps = 50)
+results3 <- model %>% evaluate(test_generator_3, steps = 50)
+loss3 <- round(results3[[1]], digits = 2)
+accuracy3 <- round(results3[[2]], digits = 2)
 ```
-
+The multi-class classification standard neural net demonstrated a loss of approximately `r loss3` and an accuracy rate of approximately `r accuracy3`. 
 
 # **10 Species (multi-class classification) - convolutional neural net**. 
 
 ## Build the network 
+
 ```{r}
 # make the new model  
 model <- keras_model_sequential() %>% 
