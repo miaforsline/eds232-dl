@@ -285,7 +285,8 @@ model <- keras_model_sequential() %>%
 ## Pick a loss function and an optimizer 
 - binary classification = the output of the network is a probability
 - thus we want to use `binary_crossentropy` loss 
-- we will use the 
+- we will use the `rmsprop` optimizer
+- we also want to measure accuracy 
 ```{r}
 model %>% compile(
   optimizer = "rmsprop",
@@ -293,20 +294,23 @@ model %>% compile(
   metrics   = c("accuracy"))
 ```
 
+## Train the model over 20 epochs 
 
 ```{r}
 history <- model %>% fit(
     train_generator,
     steps_per_epoch = 5,
-    epochs = 30,
+    epochs = 20,
     validation_data = validation_generator,
     validation_steps = 5)
 ```
+## Visualize the training and validation metrics by epoch with a history plot 
 
 ```{r}
 plot(history)
 ```
-## Evaluate 
+
+## Evaluate the model on test data 
 
 ```{r}
 test_generator <- flow_images_from_directory(
@@ -316,9 +320,13 @@ test_generator <- flow_images_from_directory(
   batch_size = 20,
   class_mode = "binary"
 )
-model %>% evaluate_generator(test_generator, steps = 50)
+results <- model %>% evaluate_generator(test_generator, steps = 50)
+
+loss <- round(results[[1]], digits = 2)
+accuracy <- round(results [[2]], digits = 2)
 ```
 
+The standard neural network for binary classification demonstrated a loss of approximately `r loss` and accuracy of approximately `r accuracy`. 
 
 # **2 Species (binary classification) - convolutional neural net**. 
 
