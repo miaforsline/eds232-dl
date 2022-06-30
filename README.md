@@ -6,6 +6,6 @@
 Machine learning enables predictions from big, complex data into actionable insights. It forms one of the foundations in data science. This course provides a broad introduction to machine learning and statistical pattern recognition with environmental data. Supervised learning (logistic regression, decision trees and neural networks) and unsupervised learning (clustering and ordination) techniques will be applied to the environmental tasks of mapping species distributions and ecological community analyses, respectively. Integer linear programming will be used to optimize biodiversity in planning a reserve. Deep learning techniques (convolutional neural networks) will enable species classification from photos and landcover classification from satellite imagery using Google Earth Engine. The first half of the course will use R and Rmarkdown on the desktop and second half will use Python and Jupyter notebooks in the cloud. This class teaches a broad sweep of advanced scientific programming skills for environmental problem solving.
 
 ## Assignment sections: 
-1. Neural networks 
-2. `keras`
-3. iNaturalist 
+1. [Neural networks](https://bbest.github.io/eds232-ml/lab4a_dl-neural-nets.html) 
+2. [`keras` package](https://bbest.github.io/eds232-ml/lab4b_examples.html)
+3. [iNaturalist](https://bbest.github.io/eds232-ml/lab4c_inat.html)
